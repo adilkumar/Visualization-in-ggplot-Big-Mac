@@ -1,0 +1,72 @@
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+setwd("C:/Users/Adil Ashish Kumar/Desktop/675 - Viz")
+data = read.csv("big-mac-full-index.csv",stringsAsFactors = F)
+
+data2 =data
+data2$year= year(data2$date)
+data2$month = months(as.Date(data2$date))
+data2= data2[data2$year == 2019,]
+filterset = c("name","month","dollar_price")
+data3 =data2[filterset]
+
+right_label <- data3 %>%
+  group_by(name) %>%
+  arrange(desc(dollar_price)) %>%
+  top_n(1)
+
+left_label <- data3 %>%
+  group_by(name) %>%
+  arrange(desc(dollar_price)) %>%
+  slice(2)
+
+big_diff <- data3 %>% 
+  spread(month, dollar_price) %>% 
+  group_by(name) %>% 
+  mutate(Diff = (July-January)/January) %>% 
+  arrange(desc(abs(Diff))) %>%
+  filter(abs(Diff) > .1)
+
+# filter the label data frames to only include those cities where the
+# difference exceeds 20%
+right_label <- filter(right_label, name %in% big_diff$name)
+left_label <- filter(left_label, name %in% big_diff$name)
+
+highlight <- filter(data3, name %in% big_diff$name)
+
+# create a new label data frame
+plot_label <- big_diff %>%
+  select(name, Diff) %>%
+  right_join(right_label)
+
+viz <- ggplot(data3, aes(x=dollar_price,y=reorder(name,dollar_price))) +
+  geom_line(aes(group = name), alpha = .3) +
+  geom_point(aes(color = month), size = 1.5, alpha = .3) +
+  geom_line(data = highlight, aes(group = name)) +
+  geom_point(data = highlight, aes(color = month), size = 2) +
+  geom_text(data = plot_label, aes(color = month, 
+                                   label = paste0(scales::percent(round(Diff, 2)))),
+            size = 3, hjust = -.5)
+
+viz +
+  scale_x_continuous(labels = scales::dollar, expand = c(0.02, 0), 
+                     limits = c(1.5,6.8)
+  ) +
+  scale_y_discrete(expand = c(.02, 0)) +
+  labs(title = "Big Mac Dollar price in 2019",
+       subtitle = "Across 56 Countries, ten saw a 10% or greater change in big mac dollar price from \nJanuary to June in 2019. The people of Argentina saw the highest price increase, where\n a big mac cost 43% more in July vs January while the people of Norway rejoiced as they paid \n17% lesser for a big mac in July as compared to January.") +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.title = element_blank(),
+        legend.justification = c(0, 1), 
+        legend.position = c(.06, 1.025),
+        legend.background = element_blank(),
+        legend.direction="horizontal",
+        text = element_text(family = "Georgia"),
+        plot.title = element_text(size = 20, margin = margin(b = 5)),
+        plot.subtitle = element_text(size = 10, color = "darkslategrey", margin = margin(b = 10)),
+        plot.caption = element_text(size = 8, margin = margin(t = 10), color = "grey70", hjust = 0))

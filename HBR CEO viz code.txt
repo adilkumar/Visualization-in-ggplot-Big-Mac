@@ -1,0 +1,30 @@
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(readxl)
+library(tidyverse)
+setwd("C:/Users/Adil Ashish Kumar/Desktop/675 - Viz")
+data = read_excel("HBR-CEO-data.xlsx")
+data1 = data
+data1 = as.data.frame(data1)
+names(data1)<-str_replace_all(names(data1), c(" " = "." , "," = "" ))
+data1 = data1[!is.na(data1$FINAL.RANK),]
+a = data1 %>% count(COUNTRY,MBA)
+b = data1 %>% count(COUNTRY)  %>% arrange((n))
+a$m = ifelse(a$MBA=="YES",a$n*-1,a$n)
+
+# X Axis Breaks and Labels 
+brks <- seq(-30, 30,10)
+lbls = paste0(as.character(c(seq(30, 0, -10), seq(10, 30, 10))))
+
+  ggplot(a, aes(x = COUNTRY, y = m, fill = MBA, label = n)) + scale_x_discrete(limits = b$COUNTRY) + 
+    geom_bar(stat = "identity", width = .6) +
+  scale_y_continuous(breaks = brks,labels = lbls) + # Labels
+    coord_flip() +  # Flip axes
+    labs(title = "The Best-Performing CEOs in the World - 2018", x="",y="No of CEOs",
+         subtitle = "Among the top 100 best performing CEOs in 2018, 49 of them are from the US!\nContrary to popular opinion, majority of the world's best CEOs did not have an MBA degree.") +
+    theme_tufte() +  # Tufte theme from ggfortify
+    theme(plot.title = element_text(size = 20,hjust = .5), 
+          axis.ticks = element_blank() ,text = element_text(family = "Georgia"),
+          plot.subtitle = element_text(size = 10, color = "darkslategrey")) +   # Centre plot title
+    scale_fill_brewer(palette = "Dark2")  # Color palette
